@@ -34,6 +34,11 @@ jobs:
             pkg: com.venom.echo
             start: echo.html
             icon: echo_cover.png
+          - out: echo3.apk
+            label: "صدى في الظلام 3"
+            pkg: com.venom.echo3
+            start: echo3.html
+            icon: echo3_cover.png
     runs-on: ubuntu-latest
     steps:
       - name: Get app files
@@ -217,7 +222,7 @@ jobs:
           cp -r "$GITHUB_WORKSPACE/site/." "$A/"
           rm -rf "$A/.git" "$A/README.md" "$A/monster (1).glb"
 
-          # app icon = this game's own picture
+          # app icon = logo
           convert "$GITHUB_WORKSPACE/$ICON_FILE" -resize 192x192 "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" || cp "$GITHUB_WORKSPACE/$ICON_FILE" "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
 
           # three.js inside the app so the 3D games work offline
