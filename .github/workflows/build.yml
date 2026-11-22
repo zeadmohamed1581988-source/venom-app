@@ -39,6 +39,11 @@ jobs:
             pkg: com.venom.echo3
             start: echo3.html
             icon: echo3_cover.png
+          - out: madrasa1.apk
+            label: "المدرسة بعد الدوام"
+            pkg: com.venom.madrasa1
+            start: madrasa1.html
+            icon: madrasa1_cover.png
     runs-on: ubuntu-latest
     steps:
       - name: Get app files
