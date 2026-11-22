@@ -18,20 +18,27 @@ jobs:
             label: "VENOM GAMING"
             pkg: com.venom.gaming
             start: design.html
+            icon: venom_icon.png
           - out: echo2.apk
             label: "صدى في الظلام 2"
             pkg: com.venom.echo2
             start: echo2.html
+            icon: echo2_cover.png
           - out: jetski.apk
             label: "جيت سكي"
             pkg: com.venom.jetski
             start: jetski.html
+            icon: jetski_cover.png
           - out: echo.apk
             label: "صدى في الظلام"
             pkg: com.venom.echo
             start: echo.html
+            icon: echo_cover.png
     runs-on: ubuntu-latest
     steps:
+      - name: Get app files
+        uses: actions/checkout@v4
+
       - name: Get website files
         uses: actions/checkout@v4
         with:
@@ -55,6 +62,7 @@ jobs:
           APP_LABEL: ${{ matrix.label }}
           APP_PKG: ${{ matrix.pkg }}
           START_PAGE: ${{ matrix.start }}
+          ICON_FILE: ${{ matrix.icon }}
         run: |
           set -e
           ROOT="$GITHUB_WORKSPACE/android"
@@ -209,8 +217,8 @@ jobs:
           cp -r "$GITHUB_WORKSPACE/site/." "$A/"
           rm -rf "$A/.git" "$A/README.md" "$A/monster (1).glb"
 
-          # app icon = logo
-          convert "$A/file_000000005138820aa8792ad72d9db0fb.png" -resize 192x192 "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" || cp "$A/file_000000005138820aa8792ad72d9db0fb.png" "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
+          # app icon = this game's own picture
+          convert "$GITHUB_WORKSPACE/$ICON_FILE" -resize 192x192 "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" || cp "$GITHUB_WORKSPACE/$ICON_FILE" "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
 
           # three.js inside the app so the 3D games work offline
           cd "$RUNNER_TEMP"
