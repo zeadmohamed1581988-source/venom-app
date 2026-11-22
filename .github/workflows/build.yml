@@ -10,6 +10,26 @@ permissions:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - out: venom-gaming.apk
+            label: "VENOM GAMING"
+            pkg: com.venom.gaming
+            start: design.html
+          - out: echo2.apk
+            label: "صدى في الظلام 2"
+            pkg: com.venom.echo2
+            start: echo2.html
+          - out: jetski.apk
+            label: "جيت سكي"
+            pkg: com.venom.jetski
+            start: jetski.html
+          - out: echo.apk
+            label: "صدى في الظلام"
+            pkg: com.venom.echo
+            start: echo.html
     runs-on: ubuntu-latest
     steps:
       - name: Get website files
@@ -31,6 +51,10 @@ jobs:
           gradle-version: "8.9"
 
       - name: Create Android project
+        env:
+          APP_LABEL: ${{ matrix.label }}
+          APP_PKG: ${{ matrix.pkg }}
+          START_PAGE: ${{ matrix.start }}
         run: |
           set -e
           ROOT="$GITHUB_WORKSPACE/android"
@@ -75,7 +99,7 @@ jobs:
               namespace 'com.venom.gaming'
               compileSdk 34
               defaultConfig {
-                  applicationId 'com.venom.gaming'
+                  applicationId 'APP_PKG_HERE'
                   minSdk 21
                   targetSdk 34
                   versionCode 1
@@ -90,13 +114,14 @@ jobs:
               implementation 'androidx.webkit:webkit:1.11.0'
           }
           EOF
+          sed -i "s|APP_PKG_HERE|$APP_PKG|" "$ROOT/app/build.gradle"
 
           cat > "$ROOT/app/src/main/AndroidManifest.xml" <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
               <application
-                  android:label="VENOM GAMING"
+                  android:label="APP_LABEL_HERE"
                   android:icon="@mipmap/ic_launcher"
                   android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
                   android:allowBackup="true">
@@ -112,6 +137,7 @@ jobs:
               </application>
           </manifest>
           EOF
+          sed -i "s|APP_LABEL_HERE|$APP_LABEL|" "$ROOT/app/src/main/AndroidManifest.xml"
 
           cat > "$ROOT/app/src/main/java/com/venom/gaming/MainActivity.java" <<'EOF'
           package com.venom.gaming;
@@ -150,7 +176,7 @@ jobs:
                           return loader.shouldInterceptRequest(request.getUrl());
                       }
                   });
-                  web.loadUrl("https://appassets.androidplatform.net/assets/design.html");
+                  web.loadUrl("https://appassets.androidplatform.net/assets/START_PAGE_HERE");
               }
 
               @Override
@@ -177,6 +203,7 @@ jobs:
               }
           }
           EOF
+          sed -i "s|START_PAGE_HERE|$START_PAGE|" "$ROOT/app/src/main/java/com/venom/gaming/MainActivity.java"
 
           # website files into the app
           cp -r "$GITHUB_WORKSPACE/site/." "$A/"
@@ -185,7 +212,7 @@ jobs:
           # app icon = logo
           convert "$A/file_000000005138820aa8792ad72d9db0fb.png" -resize 192x192 "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" || cp "$A/file_000000005138820aa8792ad72d9db0fb.png" "$ROOT/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
 
-          # three.js inside the app so the 3D game works offline
+          # three.js inside the app so the 3D games work offline
           cd "$RUNNER_TEMP"
           npm pack three@0.146.0 --silent
           tar xzf three-0.146.0.tgz
@@ -193,17 +220,36 @@ jobs:
           cp package/build/three.module.js "$A/lib/three/build/"
           cp -r package/examples/jsm/loaders "$A/lib/three/examples/jsm/"
           cp -r package/examples/jsm/utils "$A/lib/three/examples/jsm/"
-          sed -i 's#https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js#./lib/three/build/three.module.js#; s#https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/#./lib/three/examples/jsm/#' "$A/echo.html"
-          grep -q "./lib/three/build/three.module.js" "$A/echo.html"
+          if [ -f "$A/echo.html" ]; then
+            sed -i 's#https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js#./lib/three/build/three.module.js#; s#https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/#./lib/three/examples/jsm/#' "$A/echo.html"
+            grep -q "./lib/three/build/three.module.js" "$A/echo.html"
+          fi
 
       - name: Build APK
         working-directory: android
         run: gradle assembleDebug --no-daemon
 
-      - name: Publish APK
+      - name: Save APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "${{ matrix.out }}"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: ${{ matrix.out }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all APKs
+        uses: actions/download-artifact@v4
+        with:
+          path: apks
+
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk venom-gaming.apk
           gh release delete latest --yes --cleanup-tag --repo "${{ github.repository }}" || true
-          gh release create latest venom-gaming.apk --repo "${{ github.repository }}" --title "VENOM GAMING APK" --notes "أحدث نسخة من التطبيق"
+          gh release create latest apks/*/*.apk --repo "${{ github.repository }}" --title "VENOM GAMING APK" --notes "أحدث نسخ الألعاب والتطبيق"
